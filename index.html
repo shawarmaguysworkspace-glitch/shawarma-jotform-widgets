@@ -224,7 +224,7 @@
     });
 
     JFCustomWidget.subscribe('submit', function () {
-      JFCustomWidget.sendSubmit({ value: state.text, valid: !!state.text });
+      JFCustomWidget.sendSubmit({ value: state.text, valid: true });
     });
   } catch (_) {
     render(-1);
