@@ -151,6 +151,12 @@
   var COLOR = '#1a3a8b';
   var state = { text: '' };
 
+  var wrapper   = document.getElementById('sigWrapper');
+  var realInput = document.getElementById('realInput');
+  var display   = document.getElementById('sigDisplay');
+  var placeholder = document.getElementById('placeholder');
+  var clearBtn  = document.getElementById('clearBtn');
+
   function wobbleFor(idx) {
     var angles = [1.2, -0.8, 2.1, -1.5, 0.4, -2.0, 1.7, -0.3, 2.4, -1.1];
     var ys     = [0, -1, 1, -2, 0, 1, -1, 2, 0, -1];
@@ -158,63 +164,52 @@
   }
 
   function render(newCharIdx) {
-    var display     = document.getElementById('sigDisplay');
-    var placeholder = document.getElementById('placeholder');
     display.innerHTML = '';
-
     for (var i = 0; i < state.text.length; i++) {
       var span = document.createElement('span');
       span.className = 'sig-char' + (i === newCharIdx ? ' new' : '');
       span.textContent = state.text[i];
-
       var w = wobbleFor(i);
       var wobble = 'rotate(' + w.rotate + 'deg) translateY(' + w.ty + 'px)';
       span.style.cssText = 'transform:' + wobble + '; color:' + COLOR + '; --wobble:' + wobble;
       display.appendChild(span);
     }
-
     var cursor = document.createElement('span');
     cursor.className = 'sig-cursor';
     display.appendChild(cursor);
-
     placeholder.style.opacity = state.text.length ? '0' : '1';
-    JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 });
   }
 
-  // ── JotForm subscriptions (top-level, no try/catch) ──
+  // ── DOM event listeners — always active, independent of JotForm ──
+  realInput.addEventListener('input', function () {
+    var prev = state.text;
+    state.text = realInput.value;
+    var newIdx = state.text.length > prev.length ? state.text.length - 1 : -1;
+    render(newIdx);
+  });
+
+  realInput.addEventListener('focus', function () { wrapper.classList.add('focused'); });
+  realInput.addEventListener('blur',  function () { wrapper.classList.remove('focused'); });
+  wrapper.addEventListener('click',   function () { realInput.focus(); });
+
+  clearBtn.addEventListener('click', function () {
+    state.text = '';
+    realInput.value = '';
+    render(-1);
+    realInput.focus();
+  });
+
+  render(-1);
+
+  // ── JotForm integration — separate, top-level ──
   JFCustomWidget.subscribe('ready', function () {
     var existing = JFCustomWidget.getWidgetSetting('defaultValue');
     if (existing) {
       state.text = existing;
-      document.getElementById('realInput').value = existing;
-    }
-    render(-1);
-
-    var wrapper   = document.getElementById('sigWrapper');
-    var realInput = document.getElementById('realInput');
-    var clearBtn  = document.getElementById('clearBtn');
-
-    realInput.addEventListener('input', function () {
-      var prev = state.text;
-      state.text = realInput.value;
-      var newIdx = state.text.length > prev.length ? state.text.length - 1 : -1;
-      render(newIdx);
-    });
-
-    realInput.addEventListener('focus', function () { wrapper.classList.add('focused'); });
-    realInput.addEventListener('blur',  function () { wrapper.classList.remove('focused'); });
-    wrapper.addEventListener('click',   function () { realInput.focus(); });
-
-    clearBtn.addEventListener('click', function () {
-      state.text = '';
-      realInput.value = '';
+      realInput.value = existing;
       render(-1);
-      realInput.focus();
-    });
-
-    window.addEventListener('resize', function () {
-      JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 });
-    });
+    }
+    JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 });
   });
 
   JFCustomWidget.subscribe('submit', function () {
