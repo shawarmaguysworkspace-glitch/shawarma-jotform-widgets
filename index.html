@@ -148,92 +148,78 @@
 <button class="clear-btn" id="clearBtn">✕ Clear</button>
 
 <script>
-(function () {
-  const COLOR = '#1a3a8b';
-
-  const state = { text: '' };
-
-  const wrapper     = document.getElementById('sigWrapper');
-  const realInput   = document.getElementById('realInput');
-  const display     = document.getElementById('sigDisplay');
-  const placeholder = document.getElementById('placeholder');
-  const clearBtn    = document.getElementById('clearBtn');
+  var COLOR = '#1a3a8b';
+  var state = { text: '' };
 
   function wobbleFor(idx) {
-    const angles = [1.2, -0.8, 2.1, -1.5, 0.4, -2.0, 1.7, -0.3, 2.4, -1.1];
-    const ys     = [0, -1, 1, -2, 0, 1, -1, 2, 0, -1];
+    var angles = [1.2, -0.8, 2.1, -1.5, 0.4, -2.0, 1.7, -0.3, 2.4, -1.1];
+    var ys     = [0, -1, 1, -2, 0, 1, -1, 2, 0, -1];
     return { rotate: angles[idx % angles.length], ty: ys[idx % ys.length] };
   }
 
   function render(newCharIdx) {
+    var display     = document.getElementById('sigDisplay');
+    var placeholder = document.getElementById('placeholder');
     display.innerHTML = '';
 
-    for (let i = 0; i < state.text.length; i++) {
-      const span = document.createElement('span');
+    for (var i = 0; i < state.text.length; i++) {
+      var span = document.createElement('span');
       span.className = 'sig-char' + (i === newCharIdx ? ' new' : '');
       span.textContent = state.text[i];
 
-      const { rotate, ty } = wobbleFor(i);
-      const wobble = `rotate(${rotate}deg) translateY(${ty}px)`;
-      span.style.cssText = `transform:${wobble}; color:${COLOR}; --wobble:${wobble}`;
+      var w = wobbleFor(i);
+      var wobble = 'rotate(' + w.rotate + 'deg) translateY(' + w.ty + 'px)';
+      span.style.cssText = 'transform:' + wobble + '; color:' + COLOR + '; --wobble:' + wobble;
       display.appendChild(span);
     }
 
-    const cursor = document.createElement('span');
+    var cursor = document.createElement('span');
     cursor.className = 'sig-cursor';
     display.appendChild(cursor);
 
     placeholder.style.opacity = state.text.length ? '0' : '1';
-    syncHeight();
+    JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 });
   }
 
-  function syncHeight() {
-    try { JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 }); } catch (_) {}
-  }
-
-  function submitValue() {
-    try { JFCustomWidget.sendSubmit({ value: state.text, valid: true }); } catch (_) {}
-  }
-
-  realInput.addEventListener('input', () => {
-    const prev = state.text;
-    state.text = realInput.value;
-    const newIdx = state.text.length > prev.length ? state.text.length - 1 : -1;
-    render(newIdx);
-    submitValue();
-  });
-
-  realInput.addEventListener('focus', () => wrapper.classList.add('focused'));
-  realInput.addEventListener('blur',  () => wrapper.classList.remove('focused'));
-  wrapper.addEventListener('click',   () => realInput.focus());
-
-  clearBtn.addEventListener('click', () => {
-    state.text = '';
-    realInput.value = '';
+  // ── JotForm subscriptions (top-level, no try/catch) ──
+  JFCustomWidget.subscribe('ready', function () {
+    var existing = JFCustomWidget.getWidgetSetting('defaultValue');
+    if (existing) {
+      state.text = existing;
+      document.getElementById('realInput').value = existing;
+    }
     render(-1);
-    submitValue();
-    realInput.focus();
-  });
 
-  try {
-    JFCustomWidget.subscribe('ready', function () {
-      const existing = JFCustomWidget.getWidgetSetting('defaultValue');
-      if (existing) { state.text = existing; realInput.value = existing; }
+    var wrapper   = document.getElementById('sigWrapper');
+    var realInput = document.getElementById('realInput');
+    var clearBtn  = document.getElementById('clearBtn');
+
+    realInput.addEventListener('input', function () {
+      var prev = state.text;
+      state.text = realInput.value;
+      var newIdx = state.text.length > prev.length ? state.text.length - 1 : -1;
+      render(newIdx);
+    });
+
+    realInput.addEventListener('focus', function () { wrapper.classList.add('focused'); });
+    realInput.addEventListener('blur',  function () { wrapper.classList.remove('focused'); });
+    wrapper.addEventListener('click',   function () { realInput.focus(); });
+
+    clearBtn.addEventListener('click', function () {
+      state.text = '';
+      realInput.value = '';
       render(-1);
-      syncHeight();
+      realInput.focus();
     });
 
-    JFCustomWidget.subscribe('submit', function () {
-      JFCustomWidget.sendSubmit({ value: state.text, valid: true });
+    window.addEventListener('resize', function () {
+      JFCustomWidget.requestFrameResize({ height: document.body.scrollHeight + 8 });
     });
-  } catch (_) {
-    render(-1);
-    syncHeight();
-  }
+  });
 
-  render(-1);
-  window.addEventListener('resize', syncHeight);
-})();
+  JFCustomWidget.subscribe('submit', function () {
+    JFCustomWidget.sendSubmit({ value: state.text, valid: true });
+  });
 </script>
 </body>
 </html>
